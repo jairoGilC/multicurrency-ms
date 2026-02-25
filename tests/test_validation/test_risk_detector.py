@@ -272,6 +272,32 @@ class TestOldTransaction:
         assert len(old_flags) == 1
         assert old_flags[0].level == RiskLevel.LOW
 
+    def test_old_txn_medium_at_2x(
+        self,
+        detector: RiskDetector,
+        transaction: Transaction,
+        refund_result: RefundResult,
+    ) -> None:
+        """Transaction at >2x threshold (61 days, threshold=30) should get MEDIUM."""
+        transaction.timestamp = datetime.now(timezone.utc) - timedelta(days=61)
+        flags = detector.assess(transaction, refund_result, [])
+        old_flags = [f for f in flags if "days old" in f.reason.lower()]
+        assert len(old_flags) == 1
+        assert old_flags[0].level == RiskLevel.MEDIUM
+
+    def test_old_txn_high_at_3x(
+        self,
+        detector: RiskDetector,
+        transaction: Transaction,
+        refund_result: RefundResult,
+    ) -> None:
+        """Transaction at >3x threshold (91 days, threshold=30) should get HIGH."""
+        transaction.timestamp = datetime.now(timezone.utc) - timedelta(days=91)
+        flags = detector.assess(transaction, refund_result, [])
+        old_flags = [f for f in flags if "days old" in f.reason.lower()]
+        assert len(old_flags) == 1
+        assert old_flags[0].level == RiskLevel.HIGH
+
 
 class TestDefaultConfig:
     def test_default_config_used_when_none(self) -> None:

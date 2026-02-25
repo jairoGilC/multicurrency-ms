@@ -143,13 +143,21 @@ class RiskDetector:
         self, transaction: Transaction, flags: list[RiskFlag]
     ) -> None:
         days_old = (datetime.now(timezone.utc) - transaction.timestamp).days
+        threshold = self._config.old_transaction_days
 
-        if days_old <= self._config.old_transaction_days:
+        if days_old <= threshold:
             return
+
+        if days_old > threshold * 3:
+            level = RiskLevel.HIGH
+        elif days_old > threshold * 2:
+            level = RiskLevel.MEDIUM
+        else:
+            level = RiskLevel.LOW
 
         flags.append(
             RiskFlag(
-                level=RiskLevel.LOW,
+                level=level,
                 reason=f"Transaction is {days_old} days old",
                 details={
                     "transaction_date": transaction.timestamp.isoformat(),
