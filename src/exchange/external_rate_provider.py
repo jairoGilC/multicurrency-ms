@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
+from urllib.error import URLError
 from urllib.request import urlopen
 
 from src.enums import Currency
@@ -48,7 +49,7 @@ class ExternalRateProvider:
             rate = self._fetch_latest(source, target)
             self._cache[cache_key] = rate
             return rate
-        except Exception:
+        except (URLError, OSError, json.JSONDecodeError, KeyError, ValueError):
             if self._fallback is not None:
                 return self._fallback.get_current_rate(source, target)
             raise ValueError(
@@ -75,7 +76,7 @@ class ExternalRateProvider:
             try:
                 rate = self._fetch_historical(source, target, date_str)
                 self._cache[cache_key] = rate
-            except Exception:
+            except (URLError, OSError, json.JSONDecodeError, KeyError, ValueError):
                 if self._fallback is not None:
                     return self._fallback.get_rate_at_date(source, target, date)
                 raise ValueError(
@@ -111,6 +112,6 @@ class ExternalRateProvider:
         return Decimal(str(data["rates"][target.value]))
 
     @staticmethod
-    def _api_call(url: str) -> dict:
+    def _api_call(url: str) -> dict[str, Any]:
         with urlopen(url) as response:
             return json.loads(response.read().decode("utf-8"))

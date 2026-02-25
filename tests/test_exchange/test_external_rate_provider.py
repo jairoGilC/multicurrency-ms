@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
 from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
 import pytest
 
@@ -99,7 +100,7 @@ class TestFallbackBehavior:
         mock_urlopen: MagicMock,
         fallback_provider: InMemoryRateProvider,
     ) -> None:
-        mock_urlopen.side_effect = Exception("Network error")
+        mock_urlopen.side_effect = URLError("Network error")
         provider = ExternalRateProvider(fallback=fallback_provider)
         result = provider.get_current_rate(Currency.USD, Currency.EUR)
         assert result == Decimal("0.90")
@@ -108,7 +109,7 @@ class TestFallbackBehavior:
     def test_raises_without_fallback_on_api_failure(
         self, mock_urlopen: MagicMock
     ) -> None:
-        mock_urlopen.side_effect = Exception("Network error")
+        mock_urlopen.side_effect = URLError("Network error")
         provider = ExternalRateProvider()
         with pytest.raises(ValueError, match="Failed to fetch"):
             provider.get_current_rate(Currency.USD, Currency.EUR)
@@ -183,7 +184,7 @@ class TestGetRateAtDate:
         fallback_provider: InMemoryRateProvider,
         today: datetime,
     ) -> None:
-        mock_urlopen.side_effect = Exception("Timeout")
+        mock_urlopen.side_effect = URLError("Timeout")
         provider = ExternalRateProvider(fallback=fallback_provider)
         result = provider.get_rate_at_date(Currency.USD, Currency.EUR, today)
         assert result.rate == Decimal("0.90")

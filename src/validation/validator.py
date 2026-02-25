@@ -111,7 +111,10 @@ class RefundValidator:
                 continue
 
             if request.requested_amount is None:
-                amounts_equal = refund.original_amount == request.requested_amount
+                # Full refund request: consider it a duplicate if any active
+                # refund already exists for this transaction, since requesting
+                # "everything remaining" twice is always a duplicate.
+                amounts_equal = True
             else:
                 amounts_equal = self._amounts_match(
                     refund.original_amount, request.requested_amount

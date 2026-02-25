@@ -321,6 +321,49 @@ class TestFuzzyDuplicateDetection:
         assert any(e.code == "DUPLICATE_REFUND" for e in result.errors)
 
 
+class TestFullRefundDuplicateDetection:
+    """Full refund requests (requested_amount=None) should be caught as duplicates."""
+
+    def test_full_refund_duplicate_of_active_refund(
+        self,
+        validator: RefundValidator,
+        transaction: Transaction,
+    ) -> None:
+        """A full refund request is a duplicate if any active refund exists for the transaction."""
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=None,
+        )
+        previous = [
+            _make_refund_result(
+                requested_amount=Decimal("500.00"),
+                status=RefundStatus.COMPLETED,
+            )
+        ]
+        result = validator.validate(request, transaction, previous)
+        assert not result.is_valid
+        assert any(e.code == "DUPLICATE_REFUND" for e in result.errors)
+
+    def test_full_refund_not_duplicate_of_rejected(
+        self,
+        validator: RefundValidator,
+        transaction: Transaction,
+    ) -> None:
+        """A full refund is NOT a duplicate if the only previous refund was rejected."""
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=None,
+        )
+        previous = [
+            _make_refund_result(
+                requested_amount=Decimal("500.00"),
+                status=RefundStatus.REJECTED,
+            )
+        ]
+        result = validator.validate(request, transaction, previous)
+        assert result.is_valid
+
+
 class TestInvalidAmount:
     def test_zero_amount_is_invalid(
         self,

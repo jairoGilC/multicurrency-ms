@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 from src.enums import Currency, RefundStatus, RiskLevel
+from src.exchange.rate_provider import RateProvider
 from src.models import RefundResult, RiskConfig, RiskFlag, Transaction
 
 # Rough USD conversion factors: multiply by this to get USD equivalent.
@@ -21,7 +22,7 @@ _ACTIVE_REFUND_STATUSES = {RefundStatus.COMPLETED, RefundStatus.PROCESSING}
 class RiskDetector:
     """Assesses risk flags for refund operations."""
 
-    def __init__(self, config: Optional[RiskConfig] = None, rate_provider=None) -> None:
+    def __init__(self, config: Optional[RiskConfig] = None, rate_provider: Optional[RateProvider] = None) -> None:
         self._config = config if config is not None else RiskConfig()
         self._rate_provider = rate_provider
 
