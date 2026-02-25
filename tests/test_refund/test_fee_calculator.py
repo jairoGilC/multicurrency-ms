@@ -3,8 +3,6 @@
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-import pytest
-
 from src.enums import Currency, FeeType
 from src.exchange.rate_provider import InMemoryRateProvider
 from src.models import Fee
@@ -52,9 +50,7 @@ class TestFeeCalculator:
         # Second applied is fixed
         assert applied[1].deducted_amount == Decimal("50")
 
-    def test_fixed_fee_in_different_currency(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_fixed_fee_in_different_currency(self, rate_provider: InMemoryRateProvider) -> None:
         """Fixed fee of 10 USD applied to a BRL refund converts via current rate."""
         calc = FeeCalculator(rate_provider)
         fees = [Fee(type=FeeType.FIXED, value=Decimal("10"), currency=Currency.USD)]
@@ -65,9 +61,7 @@ class TestFeeCalculator:
         assert applied[0].deducted_amount == expected_deduction
         assert net == Decimal("1000") - expected_deduction
 
-    def test_fee_exceeds_amount_floors_at_zero(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_fee_exceeds_amount_floors_at_zero(self, rate_provider: InMemoryRateProvider) -> None:
         """When fees exceed the amount, net floors at 0."""
         calc = FeeCalculator(rate_provider)
         fees = [Fee(type=FeeType.FIXED, value=Decimal("2000"), currency=Currency.BRL)]
@@ -85,9 +79,7 @@ class TestFeeCalculator:
         assert net == Decimal("1000")
         assert applied == []
 
-    def test_multiple_percentage_fees_compound(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_multiple_percentage_fees_compound(self, rate_provider: InMemoryRateProvider) -> None:
         """Multiple percentage fees compound: each applies to the remaining balance.
 
         10% of 1000 = 100  -> remaining 900

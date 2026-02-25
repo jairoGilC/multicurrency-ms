@@ -8,7 +8,6 @@ import pytest
 from src.enums import (
     Currency,
     PaymentMethod,
-    RefundPolicy,
     TransactionStatus,
     TransactionType,
 )
@@ -17,7 +16,6 @@ from src.models import ExchangeRate, RiskConfig, Transaction
 from src.notifications.notifier import RefundNotifier
 from src.refund.processor import RefundProcessor
 from src.storage.repository import RefundRepository, TransactionRepository
-
 
 _SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
 _TODAY = datetime.now(timezone.utc)

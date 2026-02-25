@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 
 from src.enums import Currency
+from src.exceptions import RateNotFoundError
 from src.exchange.rate_provider import InMemoryRateProvider
 from src.models import ExchangeRate
 
@@ -104,12 +105,10 @@ class TestDirectRate:
     ) -> None:
         provider.load_rates(sample_rates)
         query_date = today + timedelta(days=10)
-        with pytest.raises(ValueError, match="No rate"):
+        with pytest.raises(RateNotFoundError, match="No rate"):
             provider.get_rate(Currency.USD, Currency.EUR, query_date)
 
-    def test_prefers_closest_date(
-        self, provider: InMemoryRateProvider, today: datetime
-    ) -> None:
+    def test_prefers_closest_date(self, provider: InMemoryRateProvider, today: datetime) -> None:
         rates = [
             ExchangeRate(
                 source_currency=Currency.USD,
@@ -153,7 +152,7 @@ class TestCrossRate:
             ),
         ]
         provider.load_rates(rates)
-        with pytest.raises(ValueError, match="No rate"):
+        with pytest.raises(RateNotFoundError, match="No rate"):
             provider.get_rate(Currency.BRL, Currency.THB, today)
 
 
@@ -179,15 +178,11 @@ class TestGetCurrentRate:
         result = provider.get_current_rate(Currency.USD, Currency.EUR)
         assert result == Decimal("0.93")
 
-    def test_no_rate_available_raises(
-        self, provider: InMemoryRateProvider
-    ) -> None:
-        with pytest.raises(ValueError, match="No rate"):
+    def test_no_rate_available_raises(self, provider: InMemoryRateProvider) -> None:
+        with pytest.raises(RateNotFoundError, match="No rate"):
             provider.get_current_rate(Currency.USD, Currency.EUR)
 
-    def test_same_currency_returns_one(
-        self, provider: InMemoryRateProvider
-    ) -> None:
+    def test_same_currency_returns_one(self, provider: InMemoryRateProvider) -> None:
         result = provider.get_current_rate(Currency.USD, Currency.USD)
         assert result == Decimal("1")
 

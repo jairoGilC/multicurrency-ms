@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 
 from src.enums import RefundPolicy
+from src.exceptions import RefundEngineError
 from src.refund.policies import (
     CurrentRatePolicy,
     CustomerFavorablePolicy,
@@ -12,7 +13,6 @@ from src.refund.policies import (
     TimeWeightedPolicy,
     get_policy,
 )
-
 
 # ---------------------------------------------------------------------------
 # CustomerFavorablePolicy
@@ -88,9 +88,7 @@ class TestOriginalRatePolicy:
         ],
         ids=["current-higher", "current-lower"],
     )
-    def test_always_returns_original(
-        self, original: Decimal, current: Decimal
-    ) -> None:
+    def test_always_returns_original(self, original: Decimal, current: Decimal) -> None:
         policy = OriginalRatePolicy()
         assert policy.calculate_rate(original, current, days_elapsed=45) == original
 
@@ -114,9 +112,7 @@ class TestCurrentRatePolicy:
         ],
         ids=["current-higher", "current-lower"],
     )
-    def test_always_returns_current(
-        self, original: Decimal, current: Decimal
-    ) -> None:
+    def test_always_returns_current(self, original: Decimal, current: Decimal) -> None:
         policy = CurrentRatePolicy()
         assert policy.calculate_rate(original, current, days_elapsed=45) == current
 
@@ -183,12 +179,10 @@ class TestGetPolicyFactory:
         ],
         ids=[p.value for p in RefundPolicy],
     )
-    def test_returns_correct_strategy(
-        self, policy_enum: RefundPolicy, expected_type: type
-    ) -> None:
+    def test_returns_correct_strategy(self, policy_enum: RefundPolicy, expected_type: type) -> None:
         strategy = get_policy(policy_enum)
         assert isinstance(strategy, expected_type)
 
     def test_raises_for_invalid_policy(self) -> None:
-        with pytest.raises(ValueError, match="Unknown refund policy"):
+        with pytest.raises(RefundEngineError, match="Unknown refund policy"):
             get_policy("NOT_A_POLICY")  # type: ignore[arg-type]

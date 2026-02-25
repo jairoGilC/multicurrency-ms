@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from src.enums import Currency, RefundStatus, RiskLevel
+from src.enums import Currency, RefundStatus
 from src.models import BatchResult, RefundResult
 
 # Currency symbol mapping for formatted output.
@@ -44,10 +44,7 @@ class BatchReportGenerator:
                 lines.append(f"  {currency_code}: {formatted}")
 
         # Flagged refunds
-        flagged = [
-            r for r in batch_result.results
-            if r.status == RefundStatus.FLAGGED
-        ]
+        flagged = [r for r in batch_result.results if r.status == RefundStatus.FLAGGED]
         if flagged:
             lines.append("")
             lines.append("Flagged Refunds:")
@@ -56,10 +53,7 @@ class BatchReportGenerator:
                 lines.append(f"  - {refund.id}: {flag_details}")
 
         # Rejected refunds
-        rejected = [
-            r for r in batch_result.results
-            if r.status == RefundStatus.REJECTED
-        ]
+        rejected = [r for r in batch_result.results if r.status == RefundStatus.REJECTED]
         if rejected:
             lines.append("")
             lines.append("Rejected Refunds:")

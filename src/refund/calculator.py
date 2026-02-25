@@ -56,9 +56,7 @@ class RefundCalculator:
         audit.append(
             AuditEntry(
                 action="determine_refund_amount",
-                details=(
-                    f"Refund amount determined: {refund_amount} {transaction.currency.value}"
-                ),
+                details=(f"Refund amount determined: {refund_amount} {transaction.currency.value}"),
                 data={
                     "requested_amount": str(request.requested_amount),
                     "refundable_amount": str(transaction.refundable_amount),
@@ -101,19 +99,19 @@ class RefundCalculator:
                 original_rate = transaction.exchange_rate_used
             else:
                 original_rate = self._rate_provider.get_rate(
-                    transaction.currency, destination_currency, transaction.timestamp,
+                    transaction.currency,
+                    destination_currency,
+                    transaction.timestamp,
                 )
             current_rate = self._rate_provider.get_current_rate(
-                transaction.currency, destination_currency,
+                transaction.currency,
+                destination_currency,
             )
 
         audit.append(
             AuditEntry(
                 action="rate_lookup",
-                details=(
-                    f"Original rate: {original_rate}, "
-                    f"Current rate: {current_rate}"
-                ),
+                details=(f"Original rate: {original_rate}, Current rate: {current_rate}"),
                 data={
                     "original_rate": str(original_rate),
                     "current_rate": str(current_rate),
@@ -133,7 +131,9 @@ class RefundCalculator:
             rate_used = Decimal("1")
         else:
             rate_used = policy_strategy.calculate_rate(
-                original_rate, current_rate, days_elapsed,
+                original_rate,
+                current_rate,
+                days_elapsed,
             )
 
         audit.append(
@@ -155,7 +155,9 @@ class RefundCalculator:
         # 5. Apply fees
         # ------------------------------------------------------------------
         after_fees, applied_fees = self._fee_calculator.apply_fees(
-            refund_amount, transaction.currency, request.fees,
+            refund_amount,
+            transaction.currency,
+            request.fees,
         )
 
         total_fees = refund_amount - after_fees
@@ -182,7 +184,8 @@ class RefundCalculator:
             destination_amount = after_fees
         else:
             destination_amount = (after_fees * rate_used).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP,
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
             )
 
         audit.append(

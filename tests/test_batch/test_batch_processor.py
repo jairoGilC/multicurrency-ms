@@ -2,8 +2,6 @@
 
 from decimal import Decimal
 
-import pytest
-
 from src.batch.batch_processor import BatchReportGenerator
 from src.enums import Currency, RefundPolicy, RefundStatus, RiskLevel
 from src.models import BatchResult, RefundResult, RiskFlag
@@ -45,9 +43,7 @@ class TestBatchReportGeneratorMixed:
             _make_result(
                 status=RefundStatus.FLAGGED,
                 dest_amount=Decimal("300"),
-                risk_flags=[
-                    RiskFlag(level=RiskLevel.HIGH, reason="High drift")
-                ],
+                risk_flags=[RiskFlag(level=RiskLevel.HIGH, reason="High drift")],
             ),
             _make_result(
                 status=RefundStatus.REJECTED,

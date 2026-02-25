@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional
+from decimal import ROUND_HALF_UP, Decimal
 
 from src.enums import Currency, RefundStatus, RiskLevel
+from src.exceptions import RateNotFoundError
 from src.exchange.rate_provider import RateProvider
 from src.models import RefundResult, RiskConfig, RiskFlag, Transaction
 
@@ -22,7 +22,9 @@ _ACTIVE_REFUND_STATUSES = {RefundStatus.COMPLETED, RefundStatus.PROCESSING}
 class RiskDetector:
     """Assesses risk flags for refund operations."""
 
-    def __init__(self, config: Optional[RiskConfig] = None, rate_provider: Optional[RateProvider] = None) -> None:
+    def __init__(
+        self, config: RiskConfig | None = None, rate_provider: RateProvider | None = None
+    ) -> None:
         self._config = config if config is not None else RiskConfig()
         self._rate_provider = rate_provider
 
@@ -57,18 +59,13 @@ class RiskDetector:
         if drift <= threshold:
             return
 
-        drift_pct = (drift * Decimal("100")).quantize(
-            Decimal("0.1"), rounding=ROUND_HALF_UP
-        )
+        drift_pct = (drift * Decimal("100")).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
         level = RiskLevel.HIGH if drift > threshold * 2 else RiskLevel.MEDIUM
 
         flags.append(
             RiskFlag(
                 level=level,
-                reason=(
-                    f"Exchange rate has drifted {drift_pct}% "
-                    f"since original transaction"
-                ),
+                reason=(f"Exchange rate has drifted {drift_pct}% since original transaction"),
                 details={
                     "original_rate": str(original_rate),
                     "current_rate": str(current_rate),
@@ -77,22 +74,18 @@ class RiskDetector:
             )
         )
 
-    def _check_large_refund(
-        self, refund_result: RefundResult, flags: list[RiskFlag]
-    ) -> None:
+    def _check_large_refund(self, refund_result: RefundResult, flags: list[RiskFlag]) -> None:
         currency = refund_result.destination_currency
         amount = refund_result.destination_amount
 
         if self._rate_provider is not None:
             try:
                 conversion_factor = self._rate_provider.get_current_rate(currency, Currency.USD)
-            except (ValueError, Exception):
+            except (RateNotFoundError, Exception):
                 conversion_factor = _USD_CONVERSION.get(currency, Decimal("1"))
         else:
             conversion_factor = _USD_CONVERSION.get(currency, Decimal("1"))
-        usd_amount = (amount * conversion_factor).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+        usd_amount = (amount * conversion_factor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         threshold = self._config.large_refund_threshold_usd
         if usd_amount <= threshold:
@@ -103,10 +96,7 @@ class RiskDetector:
         flags.append(
             RiskFlag(
                 level=level,
-                reason=(
-                    f"Refund amount equivalent to ${usd_amount} USD "
-                    f"exceeds threshold"
-                ),
+                reason=(f"Refund amount equivalent to ${usd_amount} USD exceeds threshold"),
                 details={
                     "destination_amount": str(amount),
                     "destination_currency": currency.value,
@@ -119,9 +109,7 @@ class RiskDetector:
     def _check_multiple_refunds(
         self, previous_refunds: list[RefundResult], flags: list[RiskFlag]
     ) -> None:
-        active_count = sum(
-            1 for r in previous_refunds if r.status in _ACTIVE_REFUND_STATUSES
-        )
+        active_count = sum(1 for r in previous_refunds if r.status in _ACTIVE_REFUND_STATUSES)
 
         if active_count < 2:
             return
@@ -139,9 +127,7 @@ class RiskDetector:
             )
         )
 
-    def _check_old_transaction(
-        self, transaction: Transaction, flags: list[RiskFlag]
-    ) -> None:
+    def _check_old_transaction(self, transaction: Transaction, flags: list[RiskFlag]) -> None:
         days_old = (datetime.now(timezone.utc) - transaction.timestamp).days
         threshold = self._config.old_transaction_days
 

@@ -12,7 +12,7 @@ from src.enums import (
     TransactionStatus,
     TransactionType,
 )
-from src.models import RefundResult, RiskConfig, RiskFlag, Transaction
+from src.models import RefundResult, RiskConfig, Transaction
 from src.validation.risk_detector import RiskDetector
 
 

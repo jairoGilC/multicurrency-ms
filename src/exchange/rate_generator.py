@@ -1,15 +1,16 @@
 import json
 import random
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from itertools import product
+from typing import ClassVar
 
 from src.enums import Currency
 from src.models import ExchangeRate
 
 
 class RateGenerator:
-    BASE_RATES: dict[tuple[Currency, Currency], Decimal] = {
+    BASE_RATES: ClassVar[dict[tuple[Currency, Currency], Decimal]] = {
         (Currency.USD, Currency.EUR): Decimal("0.92"),
         (Currency.USD, Currency.BRL): Decimal("5.20"),
         (Currency.USD, Currency.MXN): Decimal("19.50"),
@@ -67,9 +68,11 @@ class RateGenerator:
             for day in range(days):
                 date = start_date + timedelta(days=day)
                 drift = random.gauss(0, float(self.DAILY_VOLATILITY))
-                mean_reversion = float(self.MEAN_REVERSION_STRENGTH) * (
-                    float(base_rate) - current_rate
-                ) / float(base_rate)
+                mean_reversion = (
+                    float(self.MEAN_REVERSION_STRENGTH)
+                    * (float(base_rate) - current_rate)
+                    / float(base_rate)
+                )
                 current_rate = current_rate * (1 + drift + mean_reversion)
                 current_rate = max(current_rate, float(base_rate) * 0.5)
 

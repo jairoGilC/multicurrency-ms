@@ -4,9 +4,9 @@ from src.exchange.rate_generator import RateGenerator
 from src.exchange.rate_provider import InMemoryRateProvider, RateProvider
 
 __all__ = [
-    "RateProvider",
-    "InMemoryRateProvider",
     "ExternalRateProvider",
+    "InMemoryRateProvider",
     "RateComparator",
     "RateGenerator",
+    "RateProvider",
 ]

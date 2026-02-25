@@ -1,15 +1,12 @@
 """Tests for the RefundCalculator."""
 
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
-
-import pytest
+from decimal import ROUND_HALF_UP, Decimal
 
 from src.enums import Currency, FeeType, RefundPolicy, RefundStatus
 from src.exchange.rate_provider import InMemoryRateProvider
 from src.models import Fee, RefundRequest, Transaction
 from src.refund.calculator import RefundCalculator
-
 
 _SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
 _NOW = datetime.now(timezone.utc)
@@ -47,9 +44,7 @@ def _make_request(**overrides) -> RefundRequest:
 class TestRefundCalculator:
     """RefundCalculator orchestrates rate selection, fees, and conversion."""
 
-    def test_same_currency_full_refund(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_same_currency_full_refund(self, rate_provider: InMemoryRateProvider) -> None:
         """When destination == transaction currency, no conversion occurs."""
         calc = RefundCalculator(rate_provider)
         txn = _make_transaction()
@@ -62,9 +57,7 @@ class TestRefundCalculator:
         assert result.rate_used == Decimal("1")
         assert result.status == RefundStatus.CALCULATED
 
-    def test_cross_currency_original_rate(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_cross_currency_original_rate(self, rate_provider: InMemoryRateProvider) -> None:
         """Cross-currency refund using ORIGINAL_RATE policy uses the original rate."""
         calc = RefundCalculator(rate_provider)
         txn = _make_transaction()
@@ -76,15 +69,11 @@ class TestRefundCalculator:
         result = calc.calculate(txn, req)
 
         assert result.rate_used == Decimal("0.192")
-        expected_destination = (Decimal("1000") * Decimal("0.192")).quantize(
-            Decimal("0.01")
-        )
+        expected_destination = (Decimal("1000") * Decimal("0.192")).quantize(Decimal("0.01"))
         assert result.destination_amount == expected_destination
         assert result.destination_currency == Currency.USD
 
-    def test_cross_currency_customer_favorable(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_cross_currency_customer_favorable(self, rate_provider: InMemoryRateProvider) -> None:
         """CUSTOMER_FAVORABLE picks the higher rate (current 0.200 > original 0.192)."""
         calc = RefundCalculator(rate_provider)
         txn = _make_transaction()
@@ -125,9 +114,7 @@ class TestRefundCalculator:
         expected_dest = (Decimal("450") * Decimal("0.192")).quantize(Decimal("0.01"))
         assert result.destination_amount == expected_dest
 
-    def test_audit_entries_created_for_each_step(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_audit_entries_created_for_each_step(self, rate_provider: InMemoryRateProvider) -> None:
         """The calculator creates audit entries for each processing step."""
         calc = RefundCalculator(rate_provider)
         txn = _make_transaction()
@@ -156,9 +143,7 @@ class TestRefundCalculator:
 
         assert result.destination_currency == txn.currency
 
-    def test_quantize_uses_round_half_up(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_quantize_uses_round_half_up(self, rate_provider: InMemoryRateProvider) -> None:
         """Monetary conversion rounds .005 up (banker-friendly), not to-even.
 
         With amount=999 BRL and rate=0.19005, the raw product is 189.91995.
@@ -212,7 +197,9 @@ class TestRefundCalculator:
 
         # original_rate should be BRL->EUR at 60 days ago, NOT 0.192 (BRL->USD)
         expected_original = rate_provider.get_rate(
-            Currency.BRL, Currency.EUR, _SIXTY_DAYS_AGO,
+            Currency.BRL,
+            Currency.EUR,
+            _SIXTY_DAYS_AGO,
         )
         assert result.original_rate == expected_original
         assert result.original_rate != Decimal("0.192")  # must NOT be the booking rate
@@ -220,9 +207,7 @@ class TestRefundCalculator:
         # rate_used should equal original_rate since policy is ORIGINAL_RATE
         assert result.rate_used == expected_original
 
-    def test_same_currency_rates_are_unity(
-        self, rate_provider: InMemoryRateProvider
-    ) -> None:
+    def test_same_currency_rates_are_unity(self, rate_provider: InMemoryRateProvider) -> None:
         """When destination == transaction currency, both original_rate and
         current_rate must be Decimal("1") — no conversion is needed."""
         calc = RefundCalculator(rate_provider)

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pytest
 
 from src.audit.audit_trail import AuditTrail

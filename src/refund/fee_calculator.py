@@ -37,7 +37,8 @@ class FeeCalculator:
         # --- percentage fees first ---
         for fee in percentage_fees:
             deduction = (remaining * fee.value / Decimal("100")).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP,
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
             )
             deduction = min(deduction, remaining)
             remaining -= deduction
@@ -61,11 +62,13 @@ class FeeCalculator:
                 cache_key = (fee_currency, currency)
                 if cache_key not in rate_cache:
                     rate_cache[cache_key] = self._rate_provider.get_current_rate(
-                        fee_currency, currency,
+                        fee_currency,
+                        currency,
                     )
                 conversion_rate = rate_cache[cache_key]
                 deduction = (fee.value * conversion_rate).quantize(
-                    Decimal("0.01"), rounding=ROUND_HALF_UP,
+                    Decimal("0.01"),
+                    rounding=ROUND_HALF_UP,
                 )
 
             deduction = min(deduction, remaining)

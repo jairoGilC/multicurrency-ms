@@ -3,11 +3,8 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-import pytest
-
 from src.enums import (
     Currency,
-    FeeType,
     PaymentMethod,
     RefundPolicy,
     RefundStatus,
@@ -16,8 +13,6 @@ from src.enums import (
 )
 from src.exchange.rate_provider import InMemoryRateProvider
 from src.models import (
-    ExchangeRate,
-    Fee,
     RefundRequest,
     RiskConfig,
     Transaction,
@@ -25,7 +20,6 @@ from src.models import (
 from src.notifications.notifier import RefundNotifier
 from src.refund.processor import RefundProcessor
 from src.storage.repository import RefundRepository, TransactionRepository
-
 
 _SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
 _NOW = datetime.now(timezone.utc)
@@ -228,10 +222,7 @@ class TestBatchMixedOutcomes:
         assert batch_result.total_rejected >= 1
 
         # At least some non-rejected
-        non_rejected = [
-            r for r in batch_result.results
-            if r.status != RefundStatus.REJECTED
-        ]
+        non_rejected = [r for r in batch_result.results if r.status != RefundStatus.REJECTED]
         assert len(non_rejected) >= 2
 
         # by_currency should have entries for non-rejected

@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Protocol
 
 from src.enums import Currency
+from src.exceptions import RateNotFoundError
 from src.models import ExchangeRate
 
 
@@ -47,7 +48,7 @@ class InMemoryRateProvider:
         if rate is not None:
             return rate
 
-        raise ValueError(f"No rate found for {source.value} -> {target.value} near {date}")
+        raise RateNotFoundError(f"No rate found for {source.value} -> {target.value} near {date}")
 
     def get_current_rate(self, source: Currency, target: Currency) -> Decimal:
         if source == target:
@@ -59,19 +60,18 @@ class InMemoryRateProvider:
 
         # Fallback to O(N) scan for any edge cases not in the index
         matching = [
-            r for r in self._all_rates
+            r
+            for r in self._all_rates
             if r.source_currency == source and r.target_currency == target
         ]
         if not matching:
-            raise ValueError(f"No rate found for {source.value} -> {target.value}")
+            raise RateNotFoundError(f"No rate found for {source.value} -> {target.value}")
 
         most_recent = max(matching, key=lambda r: r.timestamp)
         self._latest_rates[(source, target)] = (most_recent.rate, most_recent.timestamp)
         return most_recent.rate
 
-    def get_rate_at_date(
-        self, source: Currency, target: Currency, date: datetime
-    ) -> ExchangeRate:
+    def get_rate_at_date(self, source: Currency, target: Currency, date: datetime) -> ExchangeRate:
         rate = self.get_rate(source, target, date)
         return ExchangeRate(
             source_currency=source,
@@ -96,10 +96,9 @@ class InMemoryRateProvider:
                 candidate = date + timedelta(days=day_offset * direction)
                 candidate_str = candidate.strftime("%Y-%m-%d")
                 candidate_key = (source, target, candidate_str)
-                if candidate_key in self._rates:
-                    if best_delta is None or day_offset < best_delta:
-                        best_delta = day_offset
-                        best_rate = self._rates[candidate_key]
+                if candidate_key in self._rates and (best_delta is None or day_offset < best_delta):
+                    best_delta = day_offset
+                    best_rate = self._rates[candidate_key]
 
         return best_rate
 
@@ -114,9 +113,7 @@ class InMemoryRateProvider:
 
         return None
 
-    def _find_most_recent_cross_rate(
-        self, source: Currency, target: Currency
-    ) -> Decimal | None:
+    def _find_most_recent_cross_rate(self, source: Currency, target: Currency) -> Decimal | None:
         src_usd = self._latest_rates.get((source, Currency.USD))
         usd_tgt = self._latest_rates.get((Currency.USD, target))
 
@@ -128,7 +125,7 @@ class InMemoryRateProvider:
     def _recompute_cross_rates(self) -> None:
         """Pre-compute cross-rates via USD for pairs not directly in _latest_rates."""
         currencies = set()
-        for (src, tgt) in self._latest_rates:
+        for src, tgt in self._latest_rates:
             currencies.add(src)
             currencies.add(tgt)
 

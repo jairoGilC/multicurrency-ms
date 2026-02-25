@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -64,7 +63,7 @@ class Transaction(BaseModel):
 class Fee(BaseModel):
     type: FeeType
     value: Decimal
-    currency: Optional[Currency] = None
+    currency: Currency | None = None
     description: str = ""
 
     @field_validator("value")
@@ -78,15 +77,15 @@ class Fee(BaseModel):
 class RefundRequest(BaseModel):
     id: str = Field(default_factory=_new_id)
     transaction_id: str
-    requested_amount: Optional[Decimal] = None
-    destination_currency: Optional[Currency] = None
+    requested_amount: Decimal | None = None
+    destination_currency: Currency | None = None
     policy: RefundPolicy = RefundPolicy.ORIGINAL_RATE
     fees: list[Fee] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator("requested_amount")
     @classmethod
-    def amount_must_be_positive_if_set(cls, v: Optional[Decimal]) -> Optional[Decimal]:
+    def amount_must_be_positive_if_set(cls, v: Decimal | None) -> Decimal | None:
         if v is not None and v <= 0:
             raise ValueError("Requested amount must be positive")
         return v
@@ -133,7 +132,7 @@ class RefundResult(BaseModel):
     risk_flags: list[RiskFlag] = Field(default_factory=list)
     audit_entries: list[AuditEntry] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    rejection_reason: Optional[str] = None
+    rejection_reason: str | None = None
 
 
 class ValidationError(BaseModel):

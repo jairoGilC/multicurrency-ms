@@ -7,9 +7,7 @@ class AuditTrail:
     def __init__(self) -> None:
         self._entries: list[AuditEntry] = []
 
-    def record(
-        self, action: str, details: str, data: dict | None = None
-    ) -> AuditEntry:
+    def record(self, action: str, details: str, data: dict | None = None) -> AuditEntry:
         """Create and store an audit entry."""
         entry = AuditEntry(
             action=action,

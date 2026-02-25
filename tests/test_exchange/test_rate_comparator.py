@@ -32,28 +32,20 @@ class TestCompareRates:
 
 class TestIsSignificantDrift:
     def test_within_threshold(self, comparator: RateComparator) -> None:
-        assert not comparator.is_significant_drift(
-            Decimal("1.0"), Decimal("1.05")
-        )
+        assert not comparator.is_significant_drift(Decimal("1.0"), Decimal("1.05"))
 
     def test_exceeds_default_threshold(self, comparator: RateComparator) -> None:
-        assert comparator.is_significant_drift(
-            Decimal("1.0"), Decimal("1.15")
-        )
+        assert comparator.is_significant_drift(Decimal("1.0"), Decimal("1.15"))
 
     def test_negative_drift_exceeds_threshold(self, comparator: RateComparator) -> None:
-        assert comparator.is_significant_drift(
-            Decimal("1.0"), Decimal("0.85")
-        )
+        assert comparator.is_significant_drift(Decimal("1.0"), Decimal("0.85"))
 
     def test_custom_threshold(self, comparator: RateComparator) -> None:
         assert comparator.is_significant_drift(
             Decimal("1.0"), Decimal("1.06"), threshold=Decimal("0.05")
         )
 
-    def test_at_exact_threshold_not_significant(
-        self, comparator: RateComparator
-    ) -> None:
+    def test_at_exact_threshold_not_significant(self, comparator: RateComparator) -> None:
         assert not comparator.is_significant_drift(
             Decimal("1.0"), Decimal("1.10"), threshold=Decimal("0.10")
         )

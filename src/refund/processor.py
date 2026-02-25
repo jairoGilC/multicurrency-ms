@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Optional
 
 from src.audit.audit_trail import AuditTrail
 from src.enums import Currency, RefundStatus, RiskLevel, TransactionStatus
@@ -33,8 +32,8 @@ class RefundProcessor:
         rate_provider: RateProvider,
         transaction_repo: TransactionRepositoryProtocol,
         refund_repo: RefundRepositoryProtocol,
-        risk_config: Optional[RiskConfig] = None,
-        notifier: Optional[RefundNotifier] = None,
+        risk_config: RiskConfig | None = None,
+        notifier: RefundNotifier | None = None,
     ) -> None:
         self._rate_provider = rate_provider
         self._transaction_repo = transaction_repo
@@ -77,9 +76,7 @@ class RefundProcessor:
         )
 
         # 2. Previous refunds
-        previous_refunds = self._refund_repo.get_by_transaction(
-            request.transaction_id
-        )
+        previous_refunds = self._refund_repo.get_by_transaction(request.transaction_id)
 
         audit.record(
             action="lookup_previous_refunds",
@@ -88,9 +85,7 @@ class RefundProcessor:
         )
 
         # 3. Validate
-        validation = self._validator.validate(
-            request, transaction, previous_refunds
-        )
+        validation = self._validator.validate(request, transaction, previous_refunds)
 
         audit.record(
             action="validation",
@@ -104,9 +99,7 @@ class RefundProcessor:
         # 4. Reject if invalid
         if not validation.is_valid:
             rejection_reason = "; ".join(e.message for e in validation.errors)
-            result = self._build_rejected_result(
-                request, transaction, rejection_reason, audit
-            )
+            result = self._build_rejected_result(request, transaction, rejection_reason, audit)
             self._refund_repo.save(result)
             self._send_notification(result, "REFUND_REJECTED")
             return result
@@ -133,18 +126,13 @@ class RefundProcessor:
         self._send_notification(result, "REFUND_CALCULATED")
 
         # 6. Assess risk
-        risk_flags = self._risk_detector.assess(
-            transaction, result, previous_refunds
-        )
+        risk_flags = self._risk_detector.assess(transaction, result, previous_refunds)
 
         audit.record(
             action="risk_assessment",
             details=f"Risk flags: {len(risk_flags)}",
             data={
-                "flags": [
-                    {"level": f.level.value, "reason": f.reason}
-                    for f in risk_flags
-                ],
+                "flags": [{"level": f.level.value, "reason": f.reason} for f in risk_flags],
             },
         )
 
@@ -235,9 +223,9 @@ class RefundProcessor:
             # Accumulate by currency for non-rejected refunds
             if result.status != RefundStatus.REJECTED:
                 currency_code = result.destination_currency.value
-                by_currency[currency_code] = by_currency.get(
-                    currency_code, Decimal("0")
-                ) + result.destination_amount
+                by_currency[currency_code] = (
+                    by_currency.get(currency_code, Decimal("0")) + result.destination_amount
+                )
 
         return BatchResult(
             total_processed=len(requests),

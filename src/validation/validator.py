@@ -1,5 +1,5 @@
+from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 
 from src.enums import RefundStatus, TransactionStatus
 from src.models import (
@@ -20,7 +20,7 @@ class RefundValidator:
     def validate(
         self,
         request: RefundRequest,
-        transaction: Optional[Transaction],
+        transaction: Transaction | None,
         previous_refunds: list[RefundResult],
     ) -> ValidationResult:
         """
@@ -43,6 +43,7 @@ class RefundValidator:
         self._check_transaction_status(transaction, errors)
         self._check_amount(request, transaction, errors)
         self._check_duplicate(request, previous_refunds, errors)
+        self._check_velocity(request, previous_refunds, errors)
 
         return ValidationResult(is_valid=len(errors) == 0, errors=errors)
 
@@ -128,6 +129,32 @@ class RefundValidator:
                             f"A refund for the same amount on transaction "
                             f"'{request.transaction_id}' is already "
                             f"{refund.status.value}"
+                        ),
+                    )
+                )
+                break
+
+    def _check_velocity(
+        self,
+        request: RefundRequest,
+        previous_refunds: list[RefundResult],
+        errors: list[ValidationError],
+    ) -> None:
+        """Flag rapid-fire refund requests within 5 minutes of an active refund."""
+        velocity_window = timedelta(minutes=5)
+        for refund in previous_refunds:
+            if refund.transaction_id != request.transaction_id:
+                continue
+            if refund.status not in _ACTIVE_REFUND_STATUSES:
+                continue
+            time_diff = abs(request.timestamp - refund.created_at)
+            if time_diff < velocity_window:
+                errors.append(
+                    ValidationError(
+                        code="RAPID_REFUND_REQUEST",
+                        message=(
+                            f"Another refund for transaction '{request.transaction_id}' "
+                            f"was processed {time_diff.total_seconds():.0f}s ago"
                         ),
                     )
                 )

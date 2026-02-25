@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime, timezone
 
 from src.models import RefundResult
+
+logger = logging.getLogger(__name__)
 
 
 class RefundNotifier:
@@ -29,9 +32,11 @@ class RefundNotifier:
             "currency": refund_result.destination_currency.value,
         }
         self._notifications.append(notification)
-        print(
-            f"[NOTIFICATION] {event} for refund {refund_result.id}: "
-            f"{refund_result.status.value}"
+        logger.info(
+            "Notification dispatched: %s for refund %s: %s",
+            event,
+            refund_result.id,
+            refund_result.status.value,
         )
 
     def get_notifications(self) -> list[dict]:

@@ -1,18 +1,19 @@
-from typing import Optional, Protocol
+from typing import Protocol
 
+from src.exceptions import RefundProcessingError, TransactionNotFoundError
 from src.models import RefundResult, Transaction
 
 
 class TransactionRepositoryProtocol(Protocol):
     def save(self, transaction: Transaction) -> Transaction: ...
-    def get(self, transaction_id: str) -> Optional[Transaction]: ...
+    def get(self, transaction_id: str) -> Transaction | None: ...
     def get_all(self) -> list[Transaction]: ...
     def update(self, transaction: Transaction) -> Transaction: ...
 
 
 class RefundRepositoryProtocol(Protocol):
     def save(self, refund: RefundResult) -> RefundResult: ...
-    def get(self, refund_id: str) -> Optional[RefundResult]: ...
+    def get(self, refund_id: str) -> RefundResult | None: ...
     def get_all(self) -> list[RefundResult]: ...
     def update(self, refund: RefundResult) -> RefundResult: ...
     def get_by_transaction(self, transaction_id: str) -> list[RefundResult]: ...
@@ -40,7 +41,7 @@ class TransactionRepository:
     def update(self, transaction: Transaction) -> Transaction:
         """Overwrite an existing transaction. Raises if not found."""
         if transaction.id not in self._transactions:
-            raise KeyError(f"Transaction {transaction.id} not found")
+            raise TransactionNotFoundError(f"Transaction {transaction.id} not found")
         self._transactions[transaction.id] = transaction
         return transaction
 
@@ -62,10 +63,7 @@ class RefundRepository:
 
     def get_by_transaction(self, transaction_id: str) -> list[RefundResult]:
         """Return all refunds linked to *transaction_id*."""
-        return [
-            r for r in self._refunds.values()
-            if r.transaction_id == transaction_id
-        ]
+        return [r for r in self._refunds.values() if r.transaction_id == transaction_id]
 
     def get_all(self) -> list[RefundResult]:
         """Return every stored refund result."""
@@ -74,6 +72,6 @@ class RefundRepository:
     def update(self, refund: RefundResult) -> RefundResult:
         """Overwrite an existing refund. Raises if not found."""
         if refund.id not in self._refunds:
-            raise KeyError(f"Refund {refund.id} not found")
+            raise RefundProcessingError(f"Refund {refund.id} not found")
         self._refunds[refund.id] = refund
         return refund

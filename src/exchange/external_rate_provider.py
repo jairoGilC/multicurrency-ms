@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
@@ -22,9 +22,9 @@ class ExternalRateProvider:
 
     STATIC_COP_RATE = Decimal("4150")  # USD -> COP static fallback
 
-    def __init__(self, fallback: Optional[InMemoryRateProvider] = None) -> None:
+    def __init__(self, fallback: InMemoryRateProvider | None = None) -> None:
         self._fallback = fallback
-        self._cache: dict[tuple[Currency, Currency, Optional[str]], Decimal] = {}
+        self._cache: dict[tuple[Currency, Currency, str | None], Decimal] = {}
 
     @classmethod
     def from_fallback(cls, fallback: InMemoryRateProvider) -> ExternalRateProvider:
@@ -49,17 +49,15 @@ class ExternalRateProvider:
             rate = self._fetch_latest(source, target)
             self._cache[cache_key] = rate
             return rate
-        except (URLError, OSError, json.JSONDecodeError, KeyError, ValueError):
+        except (URLError, OSError, json.JSONDecodeError, KeyError, ValueError) as err:
             if self._fallback is not None:
                 return self._fallback.get_current_rate(source, target)
             raise ValueError(
                 f"Failed to fetch rate for {source.value} -> {target.value} "
                 "and no fallback available"
-            )
+            ) from err
 
-    def get_rate_at_date(
-        self, source: Currency, target: Currency, date: datetime
-    ) -> ExchangeRate:
+    def get_rate_at_date(self, source: Currency, target: Currency, date: datetime) -> ExchangeRate:
         if source == target:
             return ExchangeRate(
                 source_currency=source,
@@ -76,13 +74,13 @@ class ExternalRateProvider:
             try:
                 rate = self._fetch_historical(source, target, date_str)
                 self._cache[cache_key] = rate
-            except (URLError, OSError, json.JSONDecodeError, KeyError, ValueError):
+            except (URLError, OSError, json.JSONDecodeError, KeyError, ValueError) as err:
                 if self._fallback is not None:
                     return self._fallback.get_rate_at_date(source, target, date)
                 raise ValueError(
                     f"Failed to fetch historical rate for {source.value} -> {target.value} "
                     f"on {date_str} and no fallback available"
-                )
+                ) from err
 
         return ExchangeRate(
             source_currency=source,
@@ -91,7 +89,7 @@ class ExternalRateProvider:
             timestamp=date,
         )
 
-    def _handle_cop(self, source: Currency, target: Currency) -> Optional[Decimal]:
+    def _handle_cop(self, source: Currency, target: Currency) -> Decimal | None:
         """Handle COP pairs using static fallback rate since frankfurter doesn't support COP."""
         if source == Currency.USD and target == Currency.COP:
             return self.STATIC_COP_RATE
@@ -104,9 +102,7 @@ class ExternalRateProvider:
         data = self._api_call(url)
         return Decimal(str(data["rates"][target.value]))
 
-    def _fetch_historical(
-        self, source: Currency, target: Currency, date_str: str
-    ) -> Decimal:
+    def _fetch_historical(self, source: Currency, target: Currency, date_str: str) -> Decimal:
         url = f"{_BASE_URL}/{date_str}?from={source.value}&to={target.value}"
         data = self._api_call(url)
         return Decimal(str(data["rates"][target.value]))
@@ -114,4 +110,5 @@ class ExternalRateProvider:
     @staticmethod
     def _api_call(url: str) -> dict[str, Any]:
         with urlopen(url) as response:
-            return json.loads(response.read().decode("utf-8"))
+            result: dict[str, Any] = json.loads(response.read().decode("utf-8"))
+            return result

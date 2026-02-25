@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -11,7 +11,7 @@ from src.enums import (
     TransactionStatus,
     TransactionType,
 )
-from src.models import RefundRequest, RefundResult, Transaction, ValidationError, ValidationResult
+from src.models import RefundRequest, RefundResult, Transaction
 from src.validation.validator import RefundValidator
 
 
@@ -239,6 +239,10 @@ class TestDuplicateRefund:
                 status=RefundStatus.COMPLETED,
             )
         ]
+        # Set created_at far in the past to avoid triggering velocity check
+        previous[0] = previous[0].model_copy(
+            update={"created_at": datetime(2026, 1, 1, tzinfo=timezone.utc)}
+        )
         result = validator.validate(refund_request, transaction, previous)
         assert result.is_valid
 
@@ -297,6 +301,10 @@ class TestFuzzyDuplicateDetection:
                 status=RefundStatus.COMPLETED,
             )
         ]
+        # Set created_at far in the past to avoid triggering velocity check
+        previous[0] = previous[0].model_copy(
+            update={"created_at": datetime(2026, 1, 1, tzinfo=timezone.utc)}
+        )
         result = validator.validate(request, transaction, previous)
         assert result.is_valid
 
@@ -397,3 +405,54 @@ class TestMultipleErrors:
         assert not result.is_valid
         assert len(result.errors) >= 1
         assert result.errors[0].code == "TRANSACTION_NOT_FOUND"
+
+
+class TestVelocityDetection:
+    def test_rapid_refund_flagged(
+        self, validator: RefundValidator, transaction: Transaction
+    ) -> None:
+        """A refund request within 5 minutes of an active refund is flagged."""
+        now = datetime.now(timezone.utc)
+        previous = [_make_refund_result(status=RefundStatus.COMPLETED)]
+        previous[0] = previous[0].model_copy(update={"created_at": now - timedelta(minutes=2)})
+
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=Decimal("200.00"),
+            timestamp=now,
+        )
+        result = validator.validate(request, transaction, previous)
+        assert not result.is_valid
+        assert any(e.code == "RAPID_REFUND_REQUEST" for e in result.errors)
+
+    def test_non_rapid_refund_passes(
+        self, validator: RefundValidator, transaction: Transaction
+    ) -> None:
+        """A refund request >5 minutes after an active refund passes velocity check."""
+        now = datetime.now(timezone.utc)
+        previous = [_make_refund_result(status=RefundStatus.COMPLETED)]
+        previous[0] = previous[0].model_copy(update={"created_at": now - timedelta(minutes=10)})
+
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=Decimal("200.00"),
+            timestamp=now,
+        )
+        result = validator.validate(request, transaction, previous)
+        assert result.is_valid
+
+    def test_velocity_ignores_rejected(
+        self, validator: RefundValidator, transaction: Transaction
+    ) -> None:
+        """Rejected refunds should not trigger velocity check."""
+        now = datetime.now(timezone.utc)
+        previous = [_make_refund_result(status=RefundStatus.REJECTED)]
+        previous[0] = previous[0].model_copy(update={"created_at": now - timedelta(minutes=1)})
+
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=Decimal("200.00"),
+            timestamp=now,
+        )
+        result = validator.validate(request, transaction, previous)
+        assert result.is_valid

@@ -3,22 +3,19 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-import pytest
-
 from src.enums import (
     Currency,
+    PaymentMethod,
     RefundPolicy,
     RefundStatus,
     TransactionStatus,
     TransactionType,
-    PaymentMethod,
 )
 from src.exchange.rate_provider import InMemoryRateProvider
 from src.models import RefundRequest, RiskConfig, Transaction
 from src.notifications.notifier import RefundNotifier
 from src.refund.processor import RefundProcessor
 from src.storage.repository import RefundRepository, TransactionRepository
-
 
 _SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
 _NOW = datetime.now(timezone.utc)
@@ -42,9 +39,7 @@ def _make_transaction(**overrides) -> Transaction:
     return Transaction(**defaults)
 
 
-def _save_transaction(
-    repo: TransactionRepository, **overrides
-) -> Transaction:
+def _save_transaction(repo: TransactionRepository, **overrides) -> Transaction:
     txn = _make_transaction(**overrides)
     repo.save(txn)
     return txn

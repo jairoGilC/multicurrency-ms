@@ -24,6 +24,48 @@ python3 -m pytest tests/ -v
 python3 -m pytest tests/ --cov=src --cov-report=term-missing
 ```
 
+## API Usage
+
+Start the server:
+```bash
+uvicorn src.api.app:app --reload
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/health` | Health check |
+| `POST` | `/api/v1/refunds` | Process a single refund |
+| `POST` | `/api/v1/refunds/batch` | Process multiple refunds |
+| `GET` | `/api/v1/refunds/{id}` | Retrieve a refund result |
+| `GET` | `/api/v1/transactions/{id}` | Retrieve a transaction |
+
+### Example: Create a Refund
+
+```bash
+curl -X POST http://localhost:8000/api/v1/refunds \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction_id": "txn-001",
+    "requested_amount": "500.00",
+    "destination_currency": "USD",
+    "policy": "CUSTOMER_FAVORABLE",
+    "fees": [{"type": "PERCENTAGE", "value": "5"}]
+  }'
+```
+
+## Docker
+
+```bash
+# Build and run
+docker compose up --build
+
+# Or build manually
+docker build -t multicurrency-refund-engine .
+docker run -p 8000:8000 multicurrency-refund-engine
+```
+
 ## Architecture Overview
 
 ```mermaid
@@ -191,7 +233,7 @@ Exchange rates use synthetic generation with daily volatility (0.3%) and mean re
 
 ## Testing
 
-**130 tests | 97% coverage**
+**173+ tests | 97% coverage**
 
 ```bash
 # Full suite with verbose output
@@ -212,8 +254,9 @@ python3 -m pytest tests/ --cov=src --cov-report=term-missing
 | | `test_fee_calculator.py` | Percentage, fixed, mixed fees, cross-currency conversion |
 | | `test_calculator.py` | Full calculation pipeline, same/cross currency |
 | | `test_processor.py` | Orchestration, rejection paths, status updates |
-| `test_validation/` | `test_validator.py` | All 6 validation rules |
+| `test_validation/` | `test_validator.py` | All 6 validation rules, velocity detection |
 | | `test_risk_detector.py` | All 4 risk checks, threshold behavior |
+| `test_api/` | `test_routes.py` | API endpoints, health check, error handling |
 | `test_audit/` | `test_audit_trail.py` | Entry recording, serialization, reporting |
 | `test_batch/` | `test_batch_processor.py` | Batch aggregation, per-currency totals |
 | `test_integration/` | `test_end_to_end.py` | Full pipeline from request to result |
@@ -240,6 +283,23 @@ The `CUSTOMER_FAVORABLE` policy always picks the rate that gives the customer mo
 
 ### Time-Weighted Blends over 90-Day Window
 The `TIME_WEIGHTED` policy linearly interpolates between original and current rates based on days elapsed (capped at 90). This provides a fair compromise: recent cancellations get close to the original rate, while older ones gradually shift toward the current market rate.
+
+## Known Limitations
+
+- **In-memory storage** — All data lives in Python dicts; restarting the process loses state. A production system would use PostgreSQL or similar.
+- **Synthetic exchange rates** — Rates are generated via random walk + mean reversion, not from a live API. The `RateProvider` protocol allows swapping in a real provider.
+- **No authentication or authorization** — The API has no auth layer. Production would require JWT/OAuth2.
+- **Single-process** — No horizontal scaling, no distributed locking, no idempotency keys. Concurrent refund requests for the same transaction could race.
+- **No rate limiting** — The API accepts unlimited requests. Production would add rate limiting per customer/IP.
+
+## Future Work
+
+- **Database persistence** — Swap in-memory repositories for SQLAlchemy/asyncpg implementations behind the same `Protocol` interfaces.
+- **Redis caching** — Cache exchange rates and frequently accessed transactions.
+- **JWT authentication** — Add FastAPI security dependencies with role-based access.
+- **Rate limiting** — Per-customer and per-IP rate limiting via middleware.
+- **Observability** — Structured logging with correlation IDs, Prometheus metrics, OpenTelemetry tracing.
+- **Idempotency** — Add idempotency keys to refund requests to prevent duplicate processing in distributed environments.
 
 ## Stretch Goals Implemented
 

@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Protocol
 
 from src.enums import RefundPolicy
+from src.exceptions import RefundEngineError
 
 
 class RefundPolicyStrategy(Protocol):
@@ -105,5 +106,5 @@ def get_policy(policy: RefundPolicy) -> RefundPolicyStrategy:
     """Factory: return the strategy instance for *policy*."""
     strategy = _POLICY_MAP.get(policy)
     if strategy is None:
-        raise ValueError(f"Unknown refund policy: {policy}")
+        raise RefundEngineError(f"Unknown refund policy: {policy}")
     return strategy
