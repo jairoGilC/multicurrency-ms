@@ -7,3 +7,12 @@ __pycache__/
 dist/
 build/
 .eggs/
+venv/
+.venv/
+venv./
+.env
+.DS_Store
+*.log
+htmlcov/
+.mypy_cache/
+.ruff_cache/
