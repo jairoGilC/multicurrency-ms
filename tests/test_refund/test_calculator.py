@@ -189,3 +189,49 @@ class TestRefundCalculator:
         expected = Decimal("18.005").quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         assert expected == Decimal("18.01")
         assert result.destination_amount == Decimal("18.01")
+
+    def test_cross_currency_non_supplier_uses_historical_rate(
+        self, rate_provider: InMemoryRateProvider
+    ) -> None:
+        """When destination != supplier currency, original_rate comes from
+        the rate_provider for (currency -> destination) at the transaction
+        timestamp, NOT from transaction.exchange_rate_used (which is the
+        booking rate for the supplier pair).
+
+        BRL -> EUR at 60 days ago: cross-rate via USD = 0.192 * 0.917 = 0.176064
+        BRL -> EUR current: cross-rate via USD = 0.200 * 0.893 = 0.178600
+        """
+        calc = RefundCalculator(rate_provider)
+        txn = _make_transaction()  # BRL txn, supplier_currency=USD, exchange_rate_used=0.192
+        req = _make_request(
+            destination_currency=Currency.EUR,
+            policy=RefundPolicy.ORIGINAL_RATE,
+        )
+
+        result = calc.calculate(txn, req)
+
+        # original_rate should be BRL->EUR at 60 days ago, NOT 0.192 (BRL->USD)
+        expected_original = rate_provider.get_rate(
+            Currency.BRL, Currency.EUR, _SIXTY_DAYS_AGO,
+        )
+        assert result.original_rate == expected_original
+        assert result.original_rate != Decimal("0.192")  # must NOT be the booking rate
+
+        # rate_used should equal original_rate since policy is ORIGINAL_RATE
+        assert result.rate_used == expected_original
+
+    def test_same_currency_rates_are_unity(
+        self, rate_provider: InMemoryRateProvider
+    ) -> None:
+        """When destination == transaction currency, both original_rate and
+        current_rate must be Decimal("1") — no conversion is needed."""
+        calc = RefundCalculator(rate_provider)
+        txn = _make_transaction()  # currency=BRL
+        req = _make_request(destination_currency=Currency.BRL)
+
+        result = calc.calculate(txn, req)
+
+        assert result.original_rate == Decimal("1")
+        assert result.current_rate == Decimal("1")
+        assert result.rate_used == Decimal("1")
+        assert result.destination_amount == txn.amount

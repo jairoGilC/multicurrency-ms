@@ -87,13 +87,22 @@ class RefundCalculator:
         # ------------------------------------------------------------------
         # 3. Original and current exchange rates
         # ------------------------------------------------------------------
-        original_rate = transaction.exchange_rate_used
-
         same_currency = transaction.currency == destination_currency
 
         if same_currency:
+            original_rate = Decimal("1")
             current_rate = Decimal("1")
         else:
+            # When the destination matches the supplier currency, the booking
+            # rate (transaction.exchange_rate_used) is the correct original
+            # rate.  Otherwise, look up the historical rate for the actual
+            # currency pair so that policies compare like-for-like rates.
+            if destination_currency == transaction.supplier_currency:
+                original_rate = transaction.exchange_rate_used
+            else:
+                original_rate = self._rate_provider.get_rate(
+                    transaction.currency, destination_currency, transaction.timestamp,
+                )
             current_rate = self._rate_provider.get_current_rate(
                 transaction.currency, destination_currency,
             )
