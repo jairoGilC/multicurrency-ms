@@ -66,6 +66,7 @@ class InMemoryRateProvider:
             raise ValueError(f"No rate found for {source.value} -> {target.value}")
 
         most_recent = max(matching, key=lambda r: r.timestamp)
+        self._latest_rates[(source, target)] = (most_recent.rate, most_recent.timestamp)
         return most_recent.rate
 
     def get_rate_at_date(

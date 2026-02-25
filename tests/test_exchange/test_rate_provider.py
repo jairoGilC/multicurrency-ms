@@ -373,3 +373,38 @@ class TestLatestRatesIndex:
         result = provider.get_current_rate(Currency.BRL, Currency.EUR)
         # Direct rate should be used, not cross-rate (0.20 * 0.92 = 0.184)
         assert result == Decimal("0.18")
+
+
+class TestFallbackPopulatesIndex:
+    """The O(N) fallback in get_current_rate should populate _latest_rates."""
+
+    def test_fallback_populates_index(
+        self, provider: InMemoryRateProvider, today: datetime
+    ) -> None:
+        """When fallback scan finds a rate, it should be stored in _latest_rates
+        so the next call hits the index directly."""
+        # Manually insert a rate into _all_rates without updating _latest_rates,
+        # simulating a scenario where the index is missing the entry.
+        rate = ExchangeRate(
+            source_currency=Currency.USD,
+            target_currency=Currency.THB,
+            rate=Decimal("35.50"),
+            timestamp=today,
+        )
+        provider._all_rates.append(rate)
+
+        # Confirm the index does NOT have this pair yet
+        assert (Currency.USD, Currency.THB) not in provider._latest_rates
+
+        # First call: triggers the O(N) fallback scan
+        result = provider.get_current_rate(Currency.USD, Currency.THB)
+        assert result == Decimal("35.50")
+
+        # After the fallback, _latest_rates should be populated
+        assert (Currency.USD, Currency.THB) in provider._latest_rates
+        assert provider._latest_rates[(Currency.USD, Currency.THB)][0] == Decimal("35.50")
+        assert provider._latest_rates[(Currency.USD, Currency.THB)][1] == today
+
+        # Second call: should hit the index (O(1)), returning the same result
+        result2 = provider.get_current_rate(Currency.USD, Currency.THB)
+        assert result2 == Decimal("35.50")
