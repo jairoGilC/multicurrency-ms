@@ -1,6 +1,7 @@
 """Tests for the FeeCalculator."""
 
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -102,3 +103,23 @@ class TestFeeCalculator:
         assert applied[0].deducted_amount == Decimal("100.00")
         assert applied[1].deducted_amount == Decimal("180.00")
         assert net == Decimal("720")
+
+    def test_multiple_fixed_fees_cache_rate_lookups(self) -> None:
+        """Two fixed fees in the same foreign currency should only trigger one rate lookup."""
+        mock_provider = MagicMock()
+        mock_provider.get_current_rate.return_value = Decimal("5.00")
+
+        calc = FeeCalculator(mock_provider)
+        fees = [
+            Fee(type=FeeType.FIXED, value=Decimal("10"), currency=Currency.USD),
+            Fee(type=FeeType.FIXED, value=Decimal("20"), currency=Currency.USD),
+        ]
+        net, applied = calc.apply_fees(Decimal("1000"), Currency.BRL, fees)
+
+        # Rate lookup should happen only once for the (USD, BRL) pair
+        mock_provider.get_current_rate.assert_called_once_with(Currency.USD, Currency.BRL)
+
+        # 10 USD * 5.00 = 50 BRL, 20 USD * 5.00 = 100 BRL => net = 1000 - 50 - 100 = 850
+        assert applied[0].deducted_amount == Decimal("50.00")
+        assert applied[1].deducted_amount == Decimal("100.00")
+        assert net == Decimal("850")

@@ -52,14 +52,18 @@ class FeeCalculator:
             )
 
         # --- fixed fees second ---
+        rate_cache: dict[tuple[Currency, Currency], Decimal] = {}
         for fee in fixed_fees:
             fee_currency = fee.currency or currency
             if fee_currency == currency:
                 deduction = fee.value
             else:
-                conversion_rate = self._rate_provider.get_current_rate(
-                    fee_currency, currency,
-                )
+                cache_key = (fee_currency, currency)
+                if cache_key not in rate_cache:
+                    rate_cache[cache_key] = self._rate_provider.get_current_rate(
+                        fee_currency, currency,
+                    )
+                conversion_rate = rate_cache[cache_key]
                 deduction = (fee.value * conversion_rate).quantize(
                     Decimal("0.01"), rounding=ROUND_HALF_UP,
                 )
