@@ -21,7 +21,7 @@ import io
 import random
 import sys
 from contextlib import redirect_stdout
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from src.batch.batch_processor import BatchReportGenerator
@@ -49,7 +49,7 @@ from src.storage.repository import RefundRepository, TransactionRepository
 # Constants
 # ---------------------------------------------------------------------------
 BOX_WIDTH = 64
-NOW = datetime.utcnow().replace(hour=12, minute=0, second=0, microsecond=0)
+NOW = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
 
 CURRENCY_SYMBOLS: dict[str, str] = {
     "USD": "$",

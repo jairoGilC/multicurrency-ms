@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -18,7 +18,7 @@ from src.validation.risk_detector import RiskDetector
 
 @pytest.fixture
 def now() -> datetime:
-    return datetime(2026, 2, 25, 12, 0, 0)
+    return datetime(2026, 2, 25, 12, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -255,7 +255,7 @@ class TestOldTransaction:
         transaction: Transaction,
         refund_result: RefundResult,
     ) -> None:
-        transaction.timestamp = datetime.utcnow() - timedelta(days=5)
+        transaction.timestamp = datetime.now(timezone.utc) - timedelta(days=5)
         flags = detector.assess(transaction, refund_result, [])
         old_flags = [f for f in flags if "days old" in f.reason.lower()]
         assert len(old_flags) == 0
@@ -266,7 +266,7 @@ class TestOldTransaction:
         transaction: Transaction,
         refund_result: RefundResult,
     ) -> None:
-        transaction.timestamp = datetime.utcnow() - timedelta(days=60)
+        transaction.timestamp = datetime.now(timezone.utc) - timedelta(days=60)
         flags = detector.assess(transaction, refund_result, [])
         old_flags = [f for f in flags if "days old" in f.reason.lower()]
         assert len(old_flags) == 1
@@ -290,3 +290,65 @@ class TestDefaultConfig:
         )
         detector = RiskDetector(config=custom)
         assert detector._config == custom
+
+
+class TestRateProviderInjection:
+    """RiskDetector uses injected rate_provider for dynamic USD conversion."""
+
+    def test_dynamic_rate_from_provider(
+        self,
+        transaction: Transaction,
+        refund_result: RefundResult,
+    ) -> None:
+        """When rate_provider is given, it should use dynamic rates."""
+
+        class MockRateProvider:
+            def get_current_rate(self, source: Currency, target: Currency) -> Decimal:
+                # Return a known conversion factor: 1 BRL = 0.25 USD
+                if source == Currency.BRL and target == Currency.USD:
+                    return Decimal("0.25")
+                raise ValueError("Unexpected pair")
+
+        # 2600 BRL * 0.25 = 650 USD (below 2000 threshold)
+        refund_result.destination_amount = Decimal("2600.00")
+        refund_result.destination_currency = Currency.BRL
+
+        detector = RiskDetector(config=None, rate_provider=MockRateProvider())
+        flags = detector.assess(transaction, refund_result, [])
+        large_flags = [f for f in flags if "threshold" in f.reason.lower()]
+        assert len(large_flags) == 0
+
+    def test_fallback_to_static_when_no_provider(
+        self,
+        transaction: Transaction,
+        refund_result: RefundResult,
+    ) -> None:
+        """When rate_provider is None, fall back to static rates."""
+        # 15600 BRL / 5.2 (static) = 3000 USD > 2000 threshold
+        refund_result.destination_amount = Decimal("15600.00")
+        refund_result.destination_currency = Currency.BRL
+
+        detector = RiskDetector(config=None, rate_provider=None)
+        flags = detector.assess(transaction, refund_result, [])
+        large_flags = [f for f in flags if "threshold" in f.reason.lower()]
+        assert len(large_flags) == 1
+
+    def test_fallback_when_provider_raises(
+        self,
+        transaction: Transaction,
+        refund_result: RefundResult,
+    ) -> None:
+        """When rate_provider raises ValueError, fall back to static rates."""
+
+        class FailingRateProvider:
+            def get_current_rate(self, source: Currency, target: Currency) -> Decimal:
+                raise ValueError("Rate unavailable")
+
+        # 15600 BRL / 5.2 (static fallback) = 3000 USD > 2000 threshold
+        refund_result.destination_amount = Decimal("15600.00")
+        refund_result.destination_currency = Currency.BRL
+
+        detector = RiskDetector(config=None, rate_provider=FailingRateProvider())
+        flags = detector.assess(transaction, refund_result, [])
+        large_flags = [f for f in flags if "threshold" in f.reason.lower()]
+        assert len(large_flags) == 1

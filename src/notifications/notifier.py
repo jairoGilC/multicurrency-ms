@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.models import RefundResult
 
@@ -21,7 +21,7 @@ class RefundNotifier:
                    REFUND_FLAGGED, REFUND_REJECTED, REFUND_COMPLETED.
         """
         notification: dict = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,
             "refund_id": refund_result.id,
             "status": refund_result.status.value,

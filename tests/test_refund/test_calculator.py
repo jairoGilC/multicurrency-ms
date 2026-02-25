@@ -1,7 +1,7 @@
 """Tests for the RefundCalculator."""
 
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_HALF_UP
 
 import pytest
 
@@ -11,8 +11,8 @@ from src.models import Fee, RefundRequest, Transaction
 from src.refund.calculator import RefundCalculator
 
 
-_SIXTY_DAYS_AGO = datetime.utcnow() - timedelta(days=60)
-_NOW = datetime.utcnow()
+_SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
+_NOW = datetime.now(timezone.utc)
 
 
 def _make_transaction(**overrides) -> Transaction:
@@ -155,3 +155,37 @@ class TestRefundCalculator:
         result = calc.calculate(txn, req)
 
         assert result.destination_currency == txn.currency
+
+    def test_quantize_uses_round_half_up(
+        self, rate_provider: InMemoryRateProvider
+    ) -> None:
+        """Monetary conversion rounds .005 up (banker-friendly), not to-even.
+
+        With amount=999 BRL and rate=0.19005, the raw product is 189.91995.
+        Quantizing to 2 decimal places:
+          - ROUND_HALF_EVEN (default): 189.92 (rounds .005 to even -> 189.92)
+          - ROUND_HALF_UP:             189.92 (rounds .005 up   -> 189.92)
+
+        We need a case where they actually differ.  With amount=1 and rate
+        that produces exactly X.XX5:
+          amount=100, rate=0.18005 -> 18.005
+            ROUND_HALF_EVEN -> 18.00 (rounds to even)
+            ROUND_HALF_UP   -> 18.01 (rounds up)
+        """
+        calc = RefundCalculator(rate_provider)
+        txn = _make_transaction(
+            amount=Decimal("100"),
+            exchange_rate_used=Decimal("0.18005"),
+        )
+        # Use ORIGINAL_RATE so rate_used = 0.18005
+        req = _make_request(
+            destination_currency=Currency.USD,
+            policy=RefundPolicy.ORIGINAL_RATE,
+        )
+
+        result = calc.calculate(txn, req)
+
+        # 100 * 0.18005 = 18.005 -> ROUND_HALF_UP -> 18.01
+        expected = Decimal("18.005").quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        assert expected == Decimal("18.01")
+        assert result.destination_amount == Decimal("18.01")

@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from src.enums import Currency, FeeType
 from src.exchange.rate_provider import RateProvider
@@ -37,7 +37,7 @@ class FeeCalculator:
         # --- percentage fees first ---
         for fee in percentage_fees:
             deduction = (remaining * fee.value / Decimal("100")).quantize(
-                Decimal("0.01")
+                Decimal("0.01"), rounding=ROUND_HALF_UP,
             )
             deduction = min(deduction, remaining)
             remaining -= deduction
@@ -60,7 +60,9 @@ class FeeCalculator:
                 conversion_rate = self._rate_provider.get_current_rate(
                     fee_currency, currency,
                 )
-                deduction = (fee.value * conversion_rate).quantize(Decimal("0.01"))
+                deduction = (fee.value * conversion_rate).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP,
+                )
 
             deduction = min(deduction, remaining)
             remaining -= deduction

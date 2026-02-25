@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from uuid import uuid4
@@ -82,7 +82,7 @@ class RefundRequest(BaseModel):
     destination_currency: Optional[Currency] = None
     policy: RefundPolicy = RefundPolicy.ORIGINAL_RATE
     fees: list[Fee] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator("requested_amount")
     @classmethod
@@ -93,7 +93,7 @@ class RefundRequest(BaseModel):
 
 
 class AuditEntry(BaseModel):
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     action: str
     details: str
     data: dict = Field(default_factory=dict)
@@ -132,7 +132,7 @@ class RefundResult(BaseModel):
     status: RefundStatus = RefundStatus.CALCULATED
     risk_flags: list[RiskFlag] = Field(default_factory=list)
     audit_entries: list[AuditEntry] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     rejection_reason: Optional[str] = None
 
 

@@ -13,7 +13,10 @@ from src.models import (
 )
 from src.notifications.notifier import RefundNotifier
 from src.refund.calculator import RefundCalculator
-from src.storage.repository import RefundRepository, TransactionRepository
+from src.storage.repository import (
+    RefundRepositoryProtocol,
+    TransactionRepositoryProtocol,
+)
 from src.validation.risk_detector import RiskDetector
 from src.validation.validator import RefundValidator
 
@@ -28,8 +31,8 @@ class RefundProcessor:
     def __init__(
         self,
         rate_provider: RateProvider,
-        transaction_repo: TransactionRepository,
-        refund_repo: RefundRepository,
+        transaction_repo: TransactionRepositoryProtocol,
+        refund_repo: RefundRepositoryProtocol,
         risk_config: Optional[RiskConfig] = None,
         notifier: Optional[RefundNotifier] = None,
     ) -> None:
@@ -40,7 +43,7 @@ class RefundProcessor:
 
         self._validator = RefundValidator()
         self._calculator = RefundCalculator(rate_provider)
-        self._risk_detector = RiskDetector(config=risk_config)
+        self._risk_detector = RiskDetector(config=risk_config, rate_provider=rate_provider)
 
     # ------------------------------------------------------------------
     # Single refund

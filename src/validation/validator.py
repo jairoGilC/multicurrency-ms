@@ -93,6 +93,11 @@ class RefundValidator:
                     )
                 )
 
+    @staticmethod
+    def _amounts_match(a: Decimal, b: Decimal) -> bool:
+        """Return True if two amounts are within +-0.01 tolerance."""
+        return abs(a - b) <= Decimal("0.01")
+
     def _check_duplicate(
         self,
         request: RefundRequest,
@@ -100,11 +105,19 @@ class RefundValidator:
         errors: list[ValidationError],
     ) -> None:
         for refund in previous_refunds:
-            if (
-                refund.transaction_id == request.transaction_id
-                and refund.original_amount == request.requested_amount
-                and refund.status in _ACTIVE_REFUND_STATUSES
-            ):
+            if refund.transaction_id != request.transaction_id:
+                continue
+            if refund.status not in _ACTIVE_REFUND_STATUSES:
+                continue
+
+            if request.requested_amount is None:
+                amounts_equal = refund.original_amount == request.requested_amount
+            else:
+                amounts_equal = self._amounts_match(
+                    refund.original_amount, request.requested_amount
+                )
+
+            if amounts_equal:
                 errors.append(
                     ValidationError(
                         code="DUPLICATE_REFUND",

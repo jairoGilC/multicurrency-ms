@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -22,7 +22,7 @@ def validator() -> RefundValidator:
 
 @pytest.fixture
 def now() -> datetime:
-    return datetime(2026, 2, 25, 12, 0, 0)
+    return datetime(2026, 2, 25, 12, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -258,6 +258,69 @@ class TestDuplicateRefund:
         assert result.is_valid
 
 
+class TestFuzzyDuplicateDetection:
+    """Amounts within +-0.01 tolerance should be treated as duplicates."""
+
+    def test_amount_within_tolerance_is_duplicate(
+        self,
+        validator: RefundValidator,
+        transaction: Transaction,
+    ) -> None:
+        """$300.00 refund vs $300.01 previous -> duplicate (within 0.01)."""
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=Decimal("300.00"),
+        )
+        previous = [
+            _make_refund_result(
+                requested_amount=Decimal("300.01"),
+                status=RefundStatus.COMPLETED,
+            )
+        ]
+        result = validator.validate(request, transaction, previous)
+        assert not result.is_valid
+        assert any(e.code == "DUPLICATE_REFUND" for e in result.errors)
+
+    def test_amount_outside_tolerance_is_not_duplicate(
+        self,
+        validator: RefundValidator,
+        transaction: Transaction,
+    ) -> None:
+        """$300.00 refund vs $300.02 previous -> NOT duplicate (exceeds 0.01)."""
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=Decimal("300.00"),
+        )
+        previous = [
+            _make_refund_result(
+                requested_amount=Decimal("300.02"),
+                status=RefundStatus.COMPLETED,
+            )
+        ]
+        result = validator.validate(request, transaction, previous)
+        assert result.is_valid
+
+    def test_amount_below_within_tolerance_is_duplicate(
+        self,
+        validator: RefundValidator,
+        transaction: Transaction,
+    ) -> None:
+        """$300.00 refund vs $299.99 previous -> duplicate (within 0.01)."""
+        request = RefundRequest(
+            transaction_id="txn-001",
+            requested_amount=Decimal("300.00"),
+        )
+        previous = [
+            _make_refund_result(
+                requested_amount=Decimal("299.99"),
+                status=RefundStatus.COMPLETED,
+            )
+        ]
+        result = validator.validate(request, transaction, previous)
+        assert not result.is_valid
+        assert any(e.code == "DUPLICATE_REFUND" for e in result.errors)
+
+
 class TestInvalidAmount:
     def test_zero_amount_is_invalid(
         self,
@@ -272,7 +335,7 @@ class TestInvalidAmount:
             destination_currency=None,
             policy=RefundPolicy.ORIGINAL_RATE,
             fees=[],
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         result = validator.validate(request, transaction, [])
         assert not result.is_valid

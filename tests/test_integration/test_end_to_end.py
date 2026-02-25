@@ -1,6 +1,6 @@
 """End-to-end integration tests for the Multi-Currency Refund Engine."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -27,8 +27,8 @@ from src.refund.processor import RefundProcessor
 from src.storage.repository import RefundRepository, TransactionRepository
 
 
-_SIXTY_DAYS_AGO = datetime.utcnow() - timedelta(days=60)
-_NOW = datetime.utcnow()
+_SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
+_NOW = datetime.now(timezone.utc)
 
 
 class TestCompleteRefundFlow:

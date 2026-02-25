@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from src.enums import Currency
 from src.exchange.rate_provider import RateProvider
@@ -172,7 +172,9 @@ class RefundCalculator:
         if same_currency:
             destination_amount = after_fees
         else:
-            destination_amount = (after_fees * rate_used).quantize(Decimal("0.01"))
+            destination_amount = (after_fees * rate_used).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP,
+            )
 
         audit.append(
             AuditEntry(

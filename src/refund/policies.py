@@ -19,8 +19,13 @@ class RefundPolicyStrategy(Protocol):
 
 
 class CustomerFavorablePolicy:
-    """Returns max(original_rate, current_rate) -- the rate that gives
-    the customer more money in the destination currency."""
+    """Returns max(original_rate, current_rate).
+
+    This assumes rates represent source->destination conversion
+    (e.g., BRL->USD = 0.19 means 1 BRL buys 0.19 USD).  Under this
+    convention, a higher rate yields more destination currency, which
+    is favorable to the customer receiving the refund.
+    """
 
     @property
     def name(self) -> str:
@@ -88,17 +93,17 @@ class TimeWeightedPolicy:
         return original_rate * (1 - weight) + current_rate * weight
 
 
-_POLICY_MAP: dict[RefundPolicy, type[RefundPolicyStrategy]] = {
-    RefundPolicy.CUSTOMER_FAVORABLE: CustomerFavorablePolicy,  # type: ignore[dict-item]
-    RefundPolicy.ORIGINAL_RATE: OriginalRatePolicy,  # type: ignore[dict-item]
-    RefundPolicy.CURRENT_RATE: CurrentRatePolicy,  # type: ignore[dict-item]
-    RefundPolicy.TIME_WEIGHTED: TimeWeightedPolicy,  # type: ignore[dict-item]
+_POLICY_MAP: dict[RefundPolicy, RefundPolicyStrategy] = {
+    RefundPolicy.CUSTOMER_FAVORABLE: CustomerFavorablePolicy(),
+    RefundPolicy.ORIGINAL_RATE: OriginalRatePolicy(),
+    RefundPolicy.CURRENT_RATE: CurrentRatePolicy(),
+    RefundPolicy.TIME_WEIGHTED: TimeWeightedPolicy(),
 }
 
 
 def get_policy(policy: RefundPolicy) -> RefundPolicyStrategy:
     """Factory: return the strategy instance for *policy*."""
-    strategy_cls = _POLICY_MAP.get(policy)
-    if strategy_cls is None:
+    strategy = _POLICY_MAP.get(policy)
+    if strategy is None:
         raise ValueError(f"Unknown refund policy: {policy}")
-    return strategy_cls()  # type: ignore[return-value]
+    return strategy

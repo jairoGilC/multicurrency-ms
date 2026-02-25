@@ -1,6 +1,6 @@
 """Shared pytest fixtures for the Multi-Currency Refund Engine test suite."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -19,8 +19,8 @@ from src.refund.processor import RefundProcessor
 from src.storage.repository import RefundRepository, TransactionRepository
 
 
-_SIXTY_DAYS_AGO = datetime.utcnow() - timedelta(days=60)
-_TODAY = datetime.utcnow()
+_SIXTY_DAYS_AGO = datetime.now(timezone.utc) - timedelta(days=60)
+_TODAY = datetime.now(timezone.utc)
 
 
 def _build_test_rates() -> list[ExchangeRate]:

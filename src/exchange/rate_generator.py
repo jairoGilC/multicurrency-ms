@@ -1,6 +1,6 @@
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from itertools import product
 
@@ -22,7 +22,7 @@ class RateGenerator:
 
     def generate_rates(self, days: int = 90) -> list[ExchangeRate]:
         random.seed(42)
-        today = datetime.utcnow().replace(hour=12, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
         start_date = today - timedelta(days=days - 1)
 
         usd_rates = self._generate_usd_based_rates(days, start_date)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
@@ -21,8 +21,9 @@ _ACTIVE_REFUND_STATUSES = {RefundStatus.COMPLETED, RefundStatus.PROCESSING}
 class RiskDetector:
     """Assesses risk flags for refund operations."""
 
-    def __init__(self, config: Optional[RiskConfig] = None) -> None:
+    def __init__(self, config: Optional[RiskConfig] = None, rate_provider=None) -> None:
         self._config = config if config is not None else RiskConfig()
+        self._rate_provider = rate_provider
 
     def assess(
         self,
@@ -81,7 +82,13 @@ class RiskDetector:
         currency = refund_result.destination_currency
         amount = refund_result.destination_amount
 
-        conversion_factor = _USD_CONVERSION.get(currency, Decimal("1"))
+        if self._rate_provider is not None:
+            try:
+                conversion_factor = self._rate_provider.get_current_rate(currency, Currency.USD)
+            except (ValueError, Exception):
+                conversion_factor = _USD_CONVERSION.get(currency, Decimal("1"))
+        else:
+            conversion_factor = _USD_CONVERSION.get(currency, Decimal("1"))
         usd_amount = (amount * conversion_factor).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
@@ -134,7 +141,7 @@ class RiskDetector:
     def _check_old_transaction(
         self, transaction: Transaction, flags: list[RiskFlag]
     ) -> None:
-        days_old = (datetime.utcnow() - transaction.timestamp).days
+        days_old = (datetime.now(timezone.utc) - transaction.timestamp).days
 
         if days_old <= self._config.old_transaction_days:
             return

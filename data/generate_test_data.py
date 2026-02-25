@@ -8,7 +8,7 @@ Run from project root: python3 data/generate_test_data.py
 import json
 import random
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
@@ -294,7 +294,7 @@ def _make_refund(
     if timestamp:
         result["timestamp"] = timestamp.isoformat()
     else:
-        result["timestamp"] = datetime.utcnow().isoformat()
+        result["timestamp"] = datetime.now(timezone.utc).isoformat()
     return result
 
 
@@ -646,7 +646,7 @@ def load_refund_requests() -> list[dict]:
 
 
 def main() -> None:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     print("Generating exchange rates (90 days)...")
     generator = RateGenerator()

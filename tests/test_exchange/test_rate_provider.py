@@ -244,3 +244,132 @@ class TestLoadRates:
         provider.load_rates(rates_2)
         assert provider.get_rate(Currency.USD, Currency.EUR, today) == Decimal("0.92")
         assert provider.get_rate(Currency.USD, Currency.BRL, today) == Decimal("5.20")
+
+
+class TestLatestRatesIndex:
+    """Tests for the O(1) _latest_rates index in InMemoryRateProvider."""
+
+    def test_get_current_rate_uses_index(
+        self, provider: InMemoryRateProvider, today: datetime
+    ) -> None:
+        """After loading rates, get_current_rate should return correct rate via index."""
+        rates = [
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.90"),
+                timestamp=today - timedelta(days=5),
+            ),
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.93"),
+                timestamp=today,
+            ),
+        ]
+        provider.load_rates(rates)
+        result = provider.get_current_rate(Currency.USD, Currency.EUR)
+        assert result == Decimal("0.93")
+
+    def test_cross_rate_cache_returns_derived_rate(
+        self, provider: InMemoryRateProvider, today: datetime
+    ) -> None:
+        """Cross-rate via USD should be pre-computed in the index."""
+        rates = [
+            ExchangeRate(
+                source_currency=Currency.BRL,
+                target_currency=Currency.USD,
+                rate=Decimal("0.20"),
+                timestamp=today,
+            ),
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.92"),
+                timestamp=today,
+            ),
+        ]
+        provider.load_rates(rates)
+        result = provider.get_current_rate(Currency.BRL, Currency.EUR)
+        expected = Decimal("0.20") * Decimal("0.92")
+        assert result == expected
+
+    def test_loading_new_rates_updates_index(
+        self, provider: InMemoryRateProvider, today: datetime
+    ) -> None:
+        """Loading newer rates should update the _latest_rates index."""
+        old_rates = [
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.90"),
+                timestamp=today - timedelta(days=3),
+            ),
+        ]
+        provider.load_rates(old_rates)
+        assert provider.get_current_rate(Currency.USD, Currency.EUR) == Decimal("0.90")
+
+        new_rates = [
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.95"),
+                timestamp=today,
+            ),
+        ]
+        provider.load_rates(new_rates)
+        assert provider.get_current_rate(Currency.USD, Currency.EUR) == Decimal("0.95")
+
+    def test_index_not_overwritten_by_older_rate(
+        self, provider: InMemoryRateProvider, today: datetime
+    ) -> None:
+        """Loading an older rate should NOT overwrite a newer one in the index."""
+        rates = [
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.95"),
+                timestamp=today,
+            ),
+        ]
+        provider.load_rates(rates)
+
+        older_rates = [
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.80"),
+                timestamp=today - timedelta(days=10),
+            ),
+        ]
+        provider.load_rates(older_rates)
+        assert provider.get_current_rate(Currency.USD, Currency.EUR) == Decimal("0.95")
+
+    def test_direct_rate_preferred_over_cross_rate_in_index(
+        self, provider: InMemoryRateProvider, today: datetime
+    ) -> None:
+        """If a direct rate exists, it should be in the index and used over cross-rate."""
+        rates = [
+            ExchangeRate(
+                source_currency=Currency.BRL,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.18"),
+                timestamp=today,
+            ),
+            ExchangeRate(
+                source_currency=Currency.BRL,
+                target_currency=Currency.USD,
+                rate=Decimal("0.20"),
+                timestamp=today,
+            ),
+            ExchangeRate(
+                source_currency=Currency.USD,
+                target_currency=Currency.EUR,
+                rate=Decimal("0.92"),
+                timestamp=today,
+            ),
+        ]
+        provider.load_rates(rates)
+        result = provider.get_current_rate(Currency.BRL, Currency.EUR)
+        # Direct rate should be used, not cross-rate (0.20 * 0.92 = 0.184)
+        assert result == Decimal("0.18")
