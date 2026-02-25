@@ -1,0 +1,243 @@
+[
+  {
+    "id": "REF-001",
+    "transaction_id": "TXN-004",
+    "requested_amount": null,
+    "destination_currency": "USD",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167199"
+  },
+  {
+    "id": "REF-002",
+    "transaction_id": "TXN-001",
+    "requested_amount": null,
+    "destination_currency": "BRL",
+    "policy": "CUSTOMER_FAVORABLE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167202"
+  },
+  {
+    "id": "REF-003",
+    "transaction_id": "TXN-002",
+    "requested_amount": "2690.63",
+    "destination_currency": "EUR",
+    "policy": "ORIGINAL_RATE",
+    "fees": [
+      {
+        "type": "PERCENTAGE",
+        "value": "15",
+        "currency": null,
+        "description": "Cancellation fee (15%)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167205"
+  },
+  {
+    "id": "REF-004",
+    "transaction_id": "TXN-015",
+    "requested_amount": "37488.75",
+    "destination_currency": "MXN",
+    "policy": "CURRENT_RATE",
+    "fees": [
+      {
+        "type": "FIXED",
+        "value": "25",
+        "currency": "USD",
+        "description": "Processing fee ($25 USD)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167207"
+  },
+  {
+    "id": "REF-005",
+    "transaction_id": "TXN-006",
+    "requested_amount": "3528000.00",
+    "destination_currency": "COP",
+    "policy": "TIME_WEIGHTED",
+    "fees": [
+      {
+        "type": "PERCENTAGE",
+        "value": "10",
+        "currency": null,
+        "description": "Cancellation fee (10%)"
+      },
+      {
+        "type": "FIXED",
+        "value": "15",
+        "currency": "USD",
+        "description": "Admin fee ($15 USD)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167210"
+  },
+  {
+    "id": "REF-006",
+    "transaction_id": "TXN-036",
+    "requested_amount": null,
+    "destination_currency": "THB",
+    "policy": "TIME_WEIGHTED",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167213"
+  },
+  {
+    "id": "REF-007",
+    "transaction_id": "TXN-001",
+    "requested_amount": null,
+    "destination_currency": "BRL",
+    "policy": "CURRENT_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167213"
+  },
+  {
+    "id": "REF-008",
+    "transaction_id": "TXN-002",
+    "requested_amount": null,
+    "destination_currency": "EUR",
+    "policy": "CUSTOMER_FAVORABLE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167218"
+  },
+  {
+    "id": "REF-009",
+    "transaction_id": "TXN-008",
+    "requested_amount": "1166.90",
+    "destination_currency": "USD",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167221"
+  },
+  {
+    "id": "REF-010",
+    "transaction_id": "TXN-003",
+    "requested_amount": "46.00",
+    "destination_currency": "EUR",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167222"
+  },
+  {
+    "id": "REF-011",
+    "transaction_id": "TXN-007",
+    "requested_amount": null,
+    "destination_currency": "BRL",
+    "policy": "CURRENT_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167223"
+  },
+  {
+    "id": "REF-012",
+    "transaction_id": "TXN-016",
+    "requested_amount": "38820.60",
+    "destination_currency": "MXN",
+    "policy": "CUSTOMER_FAVORABLE",
+    "fees": [
+      {
+        "type": "PERCENTAGE",
+        "value": "20",
+        "currency": null,
+        "description": "Late cancellation fee (20%)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167225"
+  },
+  {
+    "id": "REF-013",
+    "transaction_id": "TXN-002",
+    "requested_amount": null,
+    "destination_currency": "EUR",
+    "policy": "TIME_WEIGHTED",
+    "fees": [
+      {
+        "type": "FIXED",
+        "value": "10",
+        "currency": "EUR",
+        "description": "Service fee (10 EUR)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167226"
+  },
+  {
+    "id": "REF-014",
+    "transaction_id": "TXN-021",
+    "requested_amount": null,
+    "destination_currency": "COP",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167227"
+  },
+  {
+    "id": "REF-015",
+    "transaction_id": "TXN-036",
+    "requested_amount": "23618.00",
+    "destination_currency": "THB",
+    "policy": "CUSTOMER_FAVORABLE",
+    "fees": [
+      {
+        "type": "PERCENTAGE",
+        "value": "5",
+        "currency": null,
+        "description": "Processing fee (5%)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167228"
+  },
+  {
+    "id": "REF-016",
+    "transaction_id": "TXN-004",
+    "requested_amount": null,
+    "destination_currency": "USD",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167229"
+  },
+  {
+    "id": "REF-017",
+    "transaction_id": "TXN-013",
+    "requested_amount": "7045.50",
+    "destination_currency": "USD",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167230"
+  },
+  {
+    "id": "REF-018",
+    "transaction_id": "TXN-NONEXISTENT",
+    "requested_amount": null,
+    "destination_currency": "USD",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.150113"
+  },
+  {
+    "id": "REF-019",
+    "transaction_id": "TXN-014",
+    "requested_amount": null,
+    "destination_currency": "USD",
+    "policy": "ORIGINAL_RATE",
+    "fees": [],
+    "timestamp": "2026-02-25T19:43:02.167232"
+  },
+  {
+    "id": "REF-020",
+    "transaction_id": "TXN-001",
+    "requested_amount": "10754.38",
+    "destination_currency": "BRL",
+    "policy": "CUSTOMER_FAVORABLE",
+    "fees": [
+      {
+        "type": "PERCENTAGE",
+        "value": "5",
+        "currency": null,
+        "description": "Processing fee (5%)"
+      },
+      {
+        "type": "FIXED",
+        "value": "50",
+        "currency": "USD",
+        "description": "Cross-border fee ($50 USD)"
+      }
+    ],
+    "timestamp": "2026-02-25T19:43:02.167235"
+  }
+]
